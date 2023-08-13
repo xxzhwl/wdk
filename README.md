@@ -1,0 +1,27 @@
+# wdk
+用于个人开发golang服务的一个基础sdk包，包含了众多基础工具和功能。
+- cvt 类型转换
+- defs 类型定义
+- dict map操作
+- es elastic search操作
+- grpool 协程池
+- kafka kafka消息队列
+- list slice操作
+- message 消息机制
+- mysql db操作(一套基于gorm，一套基于原生)
+- plugin 提供插件式服务
+- project 项目信息
+- queue 队列
+- redis 
+- rfunc struct注册路由
+- server 协程服务+优雅退出
+- storage 存储(minio)
+- system 系统相关
+- ucache 内存map
+- uconfig 配置相关(支持apollo)
+- ucontext 上下文环境
+- ucron 定时任务注册
+- uhttp http请求
+- ulog 日志服务(基于zap,分为syslog、reqlog、dblog、apilog)
+- ustr 字符串操作
+- utime 时间操作
