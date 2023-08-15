@@ -4,6 +4,7 @@
 package uconfig
 
 import (
+	"context"
 	"fmt"
 	"github.com/bytedance/sonic"
 	"github.com/xxzhwl/wdk"
@@ -43,6 +44,10 @@ var RemoteConfigReader IRemoteConfig
 
 var RefreshLogEnable bool
 
+var waitRemote bool = false
+
+var waitTime time.Duration = 1 * time.Second
+
 func init() {
 	ucontext.BuildContext()
 	res, err := getLocalConfigs()
@@ -52,6 +57,13 @@ func init() {
 	cache.SetNoExpire(ConfigCacheKey, res)
 }
 
+// SetWaitRemote 设置本地获取不到时等待远程配置中心结果
+func SetWaitRemote(duration time.Duration) {
+	waitRemote = true
+	waitTime = duration
+}
+
+// Refresh 刷新配置
 func Refresh() {
 	ctx := ucontext.BuildContext()
 	go func(ctx *ucontext.Context) {
@@ -146,15 +158,31 @@ func getConfig(key string) (any, error) {
 		}
 	}
 	if RemoteConfigReader != nil {
-		config, err := RemoteConfigReader.GetConfig(key)
-		if err != nil {
-			return "", err
+		if waitRemote {
+			var ret any
+			ctx, cancelFunc := context.WithDeadline(context.Background(), time.Now().Add(waitTime))
+			defer func() {
+				cancelFunc()
+			}()
+			go getConfigFromRemote(ctx, key, &ret)
+			select {
+			case <-ctx.Done():
+				return nil, fmt.Errorf("remote未查询到该配置%s", key)
+			}
 		}
-		m[key] = config
-		cache.Set(ConfigCacheKey, m, time.Minute)
-		return config, nil
 	}
 	return nil, fmt.Errorf("未查询到该配置%s", key)
+}
+
+func getConfigFromRemote(ctx context.Context, key string, ret *any) {
+	m := cache.M(ConfigCacheKey)
+	config, err := RemoteConfigReader.GetConfig(key)
+	if err != nil {
+		return
+	}
+	m[key] = config
+	cache.Set(ConfigCacheKey, m, time.Minute)
+	ret = &config
 }
 
 func getConfigFromMap(key string, m map[string]any) any {
