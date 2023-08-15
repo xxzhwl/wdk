@@ -20,6 +20,14 @@ func GetValueObj(o any) reflect.Value {
 	return reflect.ValueOf(o)
 }
 
+// CallMethod 执行方法
+func CallMethod(o any, methodName string, arg any, check bool) ([]reflect.Value, error) {
+	if !check {
+		return CallMethodFromStructWithoutCheck(o, methodName, arg)
+	}
+	return CallMethodFromStruct(o, methodName, arg)
+}
+
 // CallMethodFromStruct 执行一个struct绑定的方法
 func CallMethodFromStruct(o any, methodName string, arg any) ([]reflect.Value, error) {
 	obj := GetValueObj(o)
@@ -36,6 +44,16 @@ func CallMethodFromStruct(o any, methodName string, arg any) ([]reflect.Value, e
 	}
 
 	return met.Call(in), nil
+}
+
+// CallMethodFromStructWithoutCheck 执行一个struct绑定的方法且不校验参数
+func CallMethodFromStructWithoutCheck(o any, methodName string, arg any) ([]reflect.Value, error) {
+	obj := GetValueObj(o)
+	met := obj.MethodByName(methodName)
+	if !met.IsValid() || met.IsNil() {
+		return []reflect.Value{}, fmt.Errorf("方法无效")
+	}
+	return met.Call([]reflect.Value{GetValueObj(arg)}), nil
 }
 
 // CallMethodWithMulArg 复合参数
