@@ -9,7 +9,6 @@ import (
 
 // IAlarm 告警接口
 type IAlarm interface {
-	SendAlarmMail(title, content string) error
 	SendAlarmMessage(title, content string) error
 }
 
