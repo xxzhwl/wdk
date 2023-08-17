@@ -10,6 +10,7 @@ import (
 	"github.com/xxzhwl/wdk"
 	"github.com/xxzhwl/wdk/cvt"
 	"github.com/xxzhwl/wdk/project"
+	"github.com/xxzhwl/wdk/server"
 	"github.com/xxzhwl/wdk/ucache"
 	"github.com/xxzhwl/wdk/ucontext"
 	"github.com/xxzhwl/wdk/ulog"
@@ -164,7 +165,9 @@ func getConfig(key string) (any, error) {
 			defer func() {
 				cancelFunc()
 			}()
-			go getConfigFromRemote(ctx, key, &ret)
+			server.Go(func() {
+				getConfigFromRemote(ctx, key, &ret)
+			})
 			select {
 			case <-ctx.Done():
 				return nil, fmt.Errorf("remote未查询到该配置%s", key)
