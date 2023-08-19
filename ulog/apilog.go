@@ -4,6 +4,7 @@
 package ulog
 
 import (
+	"fmt"
 	"github.com/bytedance/sonic"
 	"github.com/xxzhwl/wdk/project"
 	"github.com/xxzhwl/wdk/system"
@@ -42,10 +43,15 @@ func ApiOkLogStore(data ApiLogData) {
 	data.TraceId = context.TraceId
 	data.LocalId = context.LocalId
 	data.GoId = system.GetGoRoutineId()
-	marshal, _ := sonic.Marshal(data)
-	Info("ApiOkResponse", string(marshal))
+
+	logMsg := fmt.Sprintf("%v", data)
+	marshal, err := sonic.Marshal(data)
+	if err == nil {
+		logMsg = string(marshal)
+	}
+	Info("ApiOkResponse", logMsg)
 	if remoteLogger != nil {
-		remoteLogger.Info("apilog", string(marshal))
+		remoteLogger.Info("apilog", logMsg)
 	}
 }
 
@@ -60,9 +66,14 @@ func ApiFailLogStore(data ApiLogData) {
 	data.LocalId = context.LocalId
 	data.GoId = system.GetGoRoutineId()
 
-	marshal, _ := sonic.Marshal(data)
-	Error("ApiFailResponse", string(marshal))
+	logMsg := fmt.Sprintf("%v", data)
+	marshal, err := sonic.Marshal(data)
+	if err == nil {
+		logMsg = string(marshal)
+	}
+
+	Error("ApiFailResponse", logMsg)
 	if remoteLogger != nil {
-		remoteLogger.Info("apilog", string(marshal))
+		remoteLogger.Info("apilog", logMsg)
 	}
 }
