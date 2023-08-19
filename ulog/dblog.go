@@ -42,7 +42,6 @@ func (g *GormLogger) LogMode(level logger.LogLevel) logger.Interface {
 }
 
 func (g *GormLogger) Info(ctx context.Context, msg string, data ...interface{}) {
-	fmt.Println(msg, data)
 	if g.LogLevel >= logger.Info {
 		log.Println(msg)
 		for _, datum := range data {
@@ -95,10 +94,14 @@ func (g *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql 
 	} else if ustr.Contains(sql, "delete") {
 		data.SqlType = "Delete"
 	}
-	marshal, _ := sonic.Marshal(data)
-	Info("DbLog", string(marshal))
+	logMsg := fmt.Sprintf("%v", data)
+	marshal, err := sonic.Marshal(data)
+	if err == nil {
+		logMsg = string(marshal)
+	}
+	Info("DbLog", logMsg)
 
 	if remoteLogger != nil {
-		remoteLogger.Info("dblog", string(marshal))
+		remoteLogger.Info("dblog", logMsg)
 	}
 }

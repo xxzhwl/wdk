@@ -4,6 +4,7 @@
 package ulog
 
 import (
+	"fmt"
 	"github.com/bytedance/sonic"
 	"github.com/xxzhwl/wdk/project"
 	"github.com/xxzhwl/wdk/system"
@@ -43,9 +44,14 @@ func ReqLog(data ReqLogData) {
 	data.GoId = system.GetGoRoutineId()
 	data.LogTime = utime.DateTime()
 	data.SystemName = project.GetProjectName()
-	marshal, _ := sonic.Marshal(data)
-	Info("ReqLogData", string(marshal))
+
+	logMsg := fmt.Sprintf("%v", data)
+	marshal, err := sonic.Marshal(data)
+	if err == nil {
+		logMsg = string(marshal)
+	}
+	Info("ReqLogData", logMsg)
 	if remoteLogger != nil {
-		remoteLogger.Info("reqlog", string(marshal))
+		remoteLogger.Info("reqlog", logMsg)
 	}
 }

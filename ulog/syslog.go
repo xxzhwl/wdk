@@ -4,6 +4,7 @@
 package ulog
 
 import (
+	"fmt"
 	"github.com/bytedance/sonic"
 	"github.com/xxzhwl/wdk/project"
 	"github.com/xxzhwl/wdk/system"
@@ -29,7 +30,11 @@ func SyslogInfo(title, msg string) {
 		SystemName: project.GetProjectName(),
 	}
 	if remoteLogger != nil {
-		marshal, _ := sonic.Marshal(data)
+		marshal, err := sonic.Marshal(data)
+		if err != nil {
+			remoteLogger.Info("syslog", fmt.Sprintf("%v", data))
+			return
+		}
 		remoteLogger.Info("syslog", string(marshal))
 	}
 }
@@ -53,8 +58,12 @@ func SyslogWarn(title, msg string) {
 	}
 
 	if remoteLogger != nil {
-		marshal, _ := sonic.Marshal(data)
-		remoteLogger.Warn("syslog", string(marshal))
+		marshal, err := sonic.Marshal(data)
+		if err != nil {
+			remoteLogger.Info("syslog", fmt.Sprintf("%v", data))
+			return
+		}
+		remoteLogger.Info("syslog", string(marshal))
 	}
 }
 
@@ -77,8 +86,12 @@ func SyslogError(title, msg string) {
 	}
 
 	if remoteLogger != nil {
-		marshal, _ := sonic.Marshal(data)
-		remoteLogger.Error("syslog", string(marshal))
+		marshal, err := sonic.Marshal(data)
+		if err != nil {
+			remoteLogger.Info("syslog", fmt.Sprintf("%v", data))
+			return
+		}
+		remoteLogger.Info("syslog", string(marshal))
 	}
 
 }
