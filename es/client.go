@@ -17,7 +17,6 @@ import (
 	"github.com/xxzhwl/wdk/ulog"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/elastic/go-elasticsearch/v8/esapi"
@@ -35,21 +34,26 @@ type Client struct {
 }
 
 func NewDefaultClient() (*Client, error) {
-	return NewClientWithSchema("Default")
+	return NewClientWithSchema("Default", nil)
 }
 
-func NewClientWithSchema(schema string) (*Client, error) {
+func NewClientWithSchema(schema string, logger elastictransport.Logger) (*Client, error) {
 	addressList, err := uconfig.StringListWithErr("Es."+schema+".Address", []string{})
 	if err != nil {
 		ulog.Error("Es-NewClient", fmt.Sprintf("查询Es[%s]配置失败%s", schema, err.Error()))
 		return nil, err
 	}
-	conf := elasticsearch.Config{Addresses: addressList, Logger: &elastictransport.JSONLogger{
-		Output:             os.Stdout,
-		EnableRequestBody:  true,
-		EnableResponseBody: false,
-	}}
+	conf := elasticsearch.Config{Addresses: addressList, Logger: logger}
 
+	newClient, err := elasticsearch.NewClient(conf)
+	if err != nil {
+		ulog.Error("Es-NewClient", fmt.Sprintf("连接Es服务[%v]服务失败%s", conf.Addresses, err.Error()))
+		return nil, err
+	}
+	return &Client{Client: newClient}, nil
+}
+
+func NewClientByConf(conf elasticsearch.Config) (*Client, error) {
 	newClient, err := elasticsearch.NewClient(conf)
 	if err != nil {
 		ulog.Error("Es-NewClient", fmt.Sprintf("连接Es服务[%v]服务失败%s", conf.Addresses, err.Error()))
