@@ -9,11 +9,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bytedance/sonic"
+	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/xxzhwl/wdk/cvt"
+	"github.com/xxzhwl/wdk/list"
 	"github.com/xxzhwl/wdk/uconfig"
 	"github.com/xxzhwl/wdk/ulog"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/elastic/go-elasticsearch/v8/esapi"
@@ -40,7 +44,11 @@ func NewClientWithSchema(schema string) (*Client, error) {
 		ulog.Error("Es-NewClient", fmt.Sprintf("查询Es[%s]配置失败%s", schema, err.Error()))
 		return nil, err
 	}
-	conf := elasticsearch.Config{Addresses: addressList}
+	conf := elasticsearch.Config{Addresses: addressList, Logger: &elastictransport.JSONLogger{
+		Output:             os.Stdout,
+		EnableRequestBody:  true,
+		EnableResponseBody: false,
+	}}
 
 	newClient, err := elasticsearch.NewClient(conf)
 	if err != nil {
@@ -50,6 +58,7 @@ func NewClientWithSchema(schema string) (*Client, error) {
 	return &Client{Client: newClient}, nil
 }
 
+// Index 指定索引
 func (c *Client) Index(key string) *Client {
 	if c.Err != nil {
 		return c
@@ -73,6 +82,7 @@ func (c *Client) Index(key string) *Client {
 	return c
 }
 
+// AutoCreateIndex 指定索引，如果没有索引就创建索引
 func (c *Client) AutoCreateIndex(key string) *Client {
 	if c.Err != nil {
 		return c
@@ -112,6 +122,7 @@ func (c *Client) AutoCreateIndex(key string) *Client {
 	return c
 }
 
+// CreateDoc 创建文档
 func (c *Client) CreateDoc(doc any) error {
 	if c.Err != nil {
 		return c.Err
@@ -140,6 +151,7 @@ func (c *Client) CreateDoc(doc any) error {
 	return c.Err
 }
 
+// CreateJsonDoc 通过json内容创建文档
 func (c *Client) CreateJsonDoc(doc string) error {
 	if c.Err != nil {
 		return c.Err
@@ -149,6 +161,7 @@ func (c *Client) CreateJsonDoc(doc string) error {
 	return c.CreateDoc(mapData)
 }
 
+// CreateDocWithId 指定Id创建文档
 func (c *Client) CreateDocWithId(doc any, id string) error {
 	if c.Err != nil {
 		return c.Err
@@ -176,6 +189,7 @@ func (c *Client) CreateDocWithId(doc any, id string) error {
 	return c.Err
 }
 
+// DocInfo 文档信息
 type DocInfo struct {
 	Index   string         `json:"_index"`
 	Id      string         `json:"_id"`
@@ -183,13 +197,19 @@ type DocInfo struct {
 	Ignored []string       `json:"_ignored"`
 	Source  map[string]any `json:"_source"`
 }
+
+// DocResult 文档查询结果
 type DocResult struct {
-	TotalRows int64 `json:"took"`
-	Hits      struct {
+	Hits struct {
+		TotalRows struct {
+			Value    int64  `json:"value"`
+			Relation string `json:"relation"`
+		} `json:"total"`
 		Hits []DocInfo `json:"hits"`
 	} `json:"hits"`
 }
 
+// FindDoc 查询文档
 func (c *Client) FindDoc(cond map[string]any) (res DocResult, err error) {
 	if c.Err != nil {
 		return DocResult{}, c.Err
@@ -218,28 +238,97 @@ func (c *Client) FindDoc(cond map[string]any) (res DocResult, err error) {
 	return res, c.Err
 }
 
+// SortCond 排序结构
 type SortCond struct {
 	Column string
 	Order  string
 }
 
-func (c *Client) QueryDoc(boolCond map[string]any, from, size int64, sort []SortCond) (res DocResult, err error) {
+// Cond 查询结构
+type Cond struct {
+	Must    []Column `json:"must"`
+	MustNot []Column `json:"must_not"`
+	Should  []Column `json:"should"`
+}
+
+// Column 查询具体字段
+type Column struct {
+	Name    string
+	Value   string
+	Operate string
+}
+
+// QueryResult 查询结果
+type QueryResult struct {
+	TotalRows int64     `json:"totalRows"`
+	Hits      []DocInfo `json:"hits"`
+}
+
+// QueryDoc 查询文档
+func (c *Client) QueryDoc(boolCond Cond, from, size int64, sort []SortCond) (res QueryResult, err error) {
 	if c.Err != nil {
-		return DocResult{}, c.Err
+		return QueryResult{}, c.Err
 	}
 	sortCond := map[string]any{}
 	for _, cond := range sort {
 		sortCond[cond.Column] = map[string]any{"order": cond.Order}
 	}
 
+	condMap := make(map[string]any)
+
+	var mustCond []map[string]any
+	var mustNotCond []map[string]any
+	var shouldCond []map[string]any
+	for _, column := range boolCond.Must {
+		if len(cvt.S(column.Value)) != 0 {
+			if column.Operate == WildCard {
+				column.Value = "*" + column.Value + "*"
+			}
+			if list.InList(column.Operate, []string{RangeGt, RangeLt, RangeGte, RangeLte}) {
+				mustCond = append(mustCond, map[string]any{"range": map[string]any{column.Name: map[string]any{column.Operate: column.Value}}})
+			} else {
+				mustCond = append(mustCond, map[string]any{column.Operate: map[string]any{column.Name: column.Value}})
+			}
+		}
+	}
+	for _, column := range boolCond.MustNot {
+		if len(cvt.S(column.Value)) != 0 {
+			if column.Operate == WildCard {
+				column.Value = "*" + column.Value + "*"
+			}
+			if list.InList(column.Operate, []string{RangeGt, RangeLt, RangeGte, RangeLte}) {
+				mustNotCond = append(mustNotCond, map[string]any{"range": map[string]any{column.Name: map[string]any{column.Operate: column.Value}}})
+			} else {
+				mustNotCond = append(mustNotCond, map[string]any{column.Operate: map[string]any{column.Name: column.Value}})
+			}
+		}
+	}
+	for _, column := range boolCond.Should {
+		if len(cvt.S(column.Value)) != 0 {
+			if column.Operate == WildCard {
+				column.Value = "*" + column.Value + "*"
+			}
+			if list.InList(column.Operate, []string{RangeGt, RangeLt, RangeGte, RangeLte}) {
+				shouldCond = append(shouldCond, map[string]any{"range": map[string]any{column.Name: map[string]any{column.Operate: column.Value}}})
+			} else {
+				shouldCond = append(shouldCond, map[string]any{column.Operate: map[string]any{column.Name: column.Value}})
+			}
+		}
+	}
+	condMap["must"] = mustCond
+	condMap["must_not"] = mustNotCond
+	condMap["should"] = shouldCond
 	queryData := map[string]any{
-		"query": map[string]any{"bool": boolCond},
+		"query": map[string]any{"bool": condMap},
 		"from":  from,
 		"size":  size,
 	}
 	if len(sortCond) != 0 {
 		queryData["sort"] = sortCond
 	}
-
-	return c.FindDoc(queryData)
+	docRes, err := c.FindDoc(queryData)
+	if err != nil {
+		return QueryResult{}, err
+	}
+	return QueryResult{docRes.Hits.TotalRows.Value, docRes.Hits.Hits}, nil
 }
