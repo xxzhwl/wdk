@@ -81,6 +81,9 @@ func Info(title, msg string) {
 		localLogger.Info(title, msg)
 	}
 	goId := system.GetGoRoutineId()
+	if len(msg) > 10000 {
+		msg = msg[0:10000]
+	}
 	log.Printf("[%s][PID=%d][GOID=%s][%s]%s\n", LogTypeInfo, os.Getpid(), goId, title, msg)
 	SyslogInfo(title, msg)
 }
@@ -91,6 +94,9 @@ func InfoF(title, template string, args ...any) {
 	}
 	msg := fmt.Sprintf(template, args...)
 	goId := system.GetGoRoutineId()
+	if len(msg) > 10000 {
+		msg = msg[0:10000]
+	}
 	log.Printf("[%s][PID=%d][GOID=%s][%s]%s\n", LogTypeInfo, os.Getpid(), goId, title, msg)
 	SyslogInfo(title, msg)
 }
@@ -100,6 +106,9 @@ func Warn(title, msg string) {
 		localLogger.Warn(title, msg)
 	}
 	goId := system.GetGoRoutineId()
+	if len(msg) > 10000 {
+		msg = msg[0:10000]
+	}
 	log.Printf("[%s][PID=%d][GOID=%s][%s]%s\n", LogTypeWarn, os.Getpid(), goId, title, msg)
 	SyslogWarn(title, msg)
 }
@@ -110,6 +119,9 @@ func WarnF(title, template string, args ...any) {
 	}
 	msg := fmt.Sprintf(template, args...)
 	goId := system.GetGoRoutineId()
+	if len(msg) > 10000 {
+		msg = msg[0:10000]
+	}
 	log.Printf("[%s][PID=%d][GOID=%s][%s]%s\n", LogTypeWarn, os.Getpid(), goId, title, msg)
 	SyslogWarn(title, msg)
 }
@@ -119,6 +131,9 @@ func Error(title, msg string) {
 		localLogger.Error(title, msg)
 	}
 	goId := system.GetGoRoutineId()
+	if len(msg) > 10000 {
+		msg = msg[0:10000]
+	}
 	log.Printf("[%s][PID=%d][GOID=%s][%s]%s\n", LogTypeErr, os.Getpid(), goId, title, msg)
 	SyslogError(title, msg)
 }
@@ -129,6 +144,9 @@ func ErrorF(title, template string, args ...any) {
 	}
 	msg := fmt.Sprintf(template, args...)
 	goId := system.GetGoRoutineId()
+	if len(msg) > 10000 {
+		msg = msg[0:10000]
+	}
 	log.Printf("[%s][PID=%d][GOID=%s][%s]%s\n", LogTypeErr, os.Getpid(), goId, title, msg)
 	SyslogError(title, msg)
 }

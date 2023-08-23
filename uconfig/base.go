@@ -4,13 +4,11 @@
 package uconfig
 
 import (
-	"context"
 	"fmt"
 	"github.com/bytedance/sonic"
 	"github.com/xxzhwl/wdk"
 	"github.com/xxzhwl/wdk/cvt"
 	"github.com/xxzhwl/wdk/project"
-	"github.com/xxzhwl/wdk/server"
 	"github.com/xxzhwl/wdk/ucache"
 	"github.com/xxzhwl/wdk/ucontext"
 	"github.com/xxzhwl/wdk/ulog"
@@ -146,6 +144,12 @@ func getAllConfigs() (map[string]any, error) {
 }
 
 func getConfig(key string) (any, error) {
+	if RemoteConfigReader != nil {
+		config, err := RemoteConfigReader.GetConfig(key)
+		if err == nil {
+			return config, nil
+		}
+	}
 	m := cache.M(ConfigCacheKey)
 	if len(m) == 0 {
 		m = make(map[string]any)
@@ -158,34 +162,7 @@ func getConfig(key string) (any, error) {
 			return vt, nil
 		}
 	}
-	if RemoteConfigReader != nil {
-		if waitRemote {
-			var ret any
-			ctx, cancelFunc := context.WithDeadline(context.Background(), time.Now().Add(waitTime))
-			defer func() {
-				cancelFunc()
-			}()
-			server.Go(func() {
-				getConfigFromRemote(ctx, key, &ret)
-			})
-			select {
-			case <-ctx.Done():
-				return nil, fmt.Errorf("remote未查询到该配置%s", key)
-			}
-		}
-	}
 	return nil, fmt.Errorf("未查询到该配置%s", key)
-}
-
-func getConfigFromRemote(ctx context.Context, key string, ret *any) {
-	m := cache.M(ConfigCacheKey)
-	config, err := RemoteConfigReader.GetConfig(key)
-	if err != nil {
-		return
-	}
-	m[key] = config
-	cache.Set(ConfigCacheKey, m, time.Minute)
-	ret = &config
 }
 
 func getConfigFromMap(key string, m map[string]any) any {
