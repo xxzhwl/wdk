@@ -44,7 +44,9 @@ func ReqLog(data ReqLogData) {
 	data.GoId = system.GetGoRoutineId()
 	data.LogTime = utime.DateTime()
 	data.SystemName = project.GetProjectName()
-
+	if len(data.Response) > 10000 {
+		data.Response = data.Response[0:10000]
+	}
 	logMsg := fmt.Sprintf("%v", data)
 	marshal, err := sonic.Marshal(data)
 	if err == nil {

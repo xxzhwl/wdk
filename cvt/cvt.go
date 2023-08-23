@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bytedance/sonic"
+	"github.com/ghodss/yaml"
 	"reflect"
 	"strconv"
 	"strings"
@@ -133,10 +134,20 @@ func MS(value any) map[string]string {
 func ToMap(value any, defaultValue map[string]any) (map[string]any, error) {
 	res := make(map[string]any)
 	if reflect.ValueOf(value).Kind() == reflect.String {
-		err := sonic.Unmarshal([]byte(value.(string)), &res)
-		if err != nil {
-			return defaultValue, err
+		//try unmarshal by json or yaml
+		valid := json.Valid([]byte(value.(string)))
+		if valid {
+			err := sonic.Unmarshal([]byte(value.(string)), &res)
+			if err != nil {
+				return defaultValue, err
+			}
+		} else {
+			err := yaml.Unmarshal([]byte(value.(string)), &res)
+			if err != nil {
+				return defaultValue, err
+			}
 		}
+		return res, nil
 	}
 	marshal, err := sonic.Marshal(value)
 	if err != nil {
@@ -152,6 +163,22 @@ func ToMap(value any, defaultValue map[string]any) (map[string]any, error) {
 // ToMapS 转换成map string string
 func ToMapS(value any, defaultValue map[string]string) (map[string]string, error) {
 	res := make(map[string]string)
+	if reflect.ValueOf(value).Kind() == reflect.String {
+		//try unmarshal by json or yaml
+		valid := json.Valid([]byte(value.(string)))
+		if valid {
+			err := sonic.Unmarshal([]byte(value.(string)), &res)
+			if err != nil {
+				return defaultValue, err
+			}
+		} else {
+			err := yaml.Unmarshal([]byte(value.(string)), &res)
+			if err != nil {
+				return defaultValue, err
+			}
+		}
+		return res, nil
+	}
 	marshal, err := sonic.Marshal(value)
 	if err != nil {
 		return defaultValue, err
@@ -163,12 +190,12 @@ func ToMapS(value any, defaultValue map[string]string) (map[string]string, error
 	return res, nil
 }
 
-func MapToStruct[T any](m map[string]T, v any) error {
+func MapToStruct(m map[string]any, v any) error {
 	marshal, err := sonic.Marshal(m)
 	if err != nil {
 		return err
 	}
-	if err := sonic.Unmarshal(marshal, &v); err != nil {
+	if err = sonic.Unmarshal(marshal, &v); err != nil {
 		return err
 	}
 	return nil

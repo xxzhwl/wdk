@@ -264,8 +264,8 @@ type Column struct {
 
 // QueryResult 查询结果
 type QueryResult struct {
-	TotalRows int64     `json:"totalRows"`
-	Hits      []DocInfo `json:"hits"`
+	TotalRows int64            `json:"totalRows"`
+	Hits      []map[string]any `json:"hits"`
 }
 
 // QueryDoc 查询文档
@@ -334,5 +334,9 @@ func (c *Client) QueryDoc(boolCond Cond, from, size int64, sort []SortCond) (res
 	if err != nil {
 		return QueryResult{}, err
 	}
-	return QueryResult{docRes.Hits.TotalRows.Value, docRes.Hits.Hits}, nil
+	var docs []map[string]any
+	for _, hit := range docRes.Hits.Hits {
+		docs = append(docs, hit.Source)
+	}
+	return QueryResult{docRes.Hits.TotalRows.Value, docs}, nil
 }

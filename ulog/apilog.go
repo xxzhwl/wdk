@@ -43,6 +43,9 @@ func ApiOkLogStore(data ApiLogData) {
 	data.TraceId = context.TraceId
 	data.LocalId = context.LocalId
 	data.GoId = system.GetGoRoutineId()
+	if len(data.Response) > 10000 {
+		data.Response = data.Response[0:10000]
+	}
 
 	logMsg := fmt.Sprintf("%v", data)
 	marshal, err := sonic.Marshal(data)
@@ -50,6 +53,7 @@ func ApiOkLogStore(data ApiLogData) {
 		logMsg = string(marshal)
 	}
 	Info("ApiOkResponse", logMsg)
+
 	if remoteLogger != nil {
 		remoteLogger.Info("apilog", logMsg)
 	}
@@ -65,13 +69,14 @@ func ApiFailLogStore(data ApiLogData) {
 	data.TraceId = context.TraceId
 	data.LocalId = context.LocalId
 	data.GoId = system.GetGoRoutineId()
-
+	if len(data.Response) > 10000 {
+		data.Response = data.Response[0:10000]
+	}
 	logMsg := fmt.Sprintf("%v", data)
 	marshal, err := sonic.Marshal(data)
 	if err == nil {
 		logMsg = string(marshal)
 	}
-
 	Error("ApiFailResponse", logMsg)
 	if remoteLogger != nil {
 		remoteLogger.Info("apilog", logMsg)

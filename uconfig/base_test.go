@@ -8,5 +8,4 @@ import (
 )
 
 func TestGetConfig(t *testing.T) {
-
 }

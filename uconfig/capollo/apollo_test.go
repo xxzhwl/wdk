@@ -1,7 +1,7 @@
 // Package uconfig 包描述
 // Author: wanlizhan
 // Date: 2023/6/11
-package apollo
+package capollo
 
 import (
 	"fmt"
